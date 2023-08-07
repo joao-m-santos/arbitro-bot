@@ -30,7 +30,7 @@
     "lint-staged": "^13.2.3"
   },
   "lint-staged": {
-    "*": "eslint --fix"
+    "*.js": "eslint --fix"
   },
   "engines": {
     "node": ">=19"
