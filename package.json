@@ -1,7 +1,7 @@
 {
   "name": "arbitro-bot",
   "version": "0.1.0",
-  "description": "",
+  "description": "A Discord bot to register in-house custom games and track player elo rating. Built in Javascript.",
   "type": "module",
   "main": "index.js",
   "scripts": {
@@ -10,9 +10,14 @@
     "lint:fix": "eslint --fix",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "joao-m-santos",
-  "license": "ISC",
+  "keywords": [
+    "discord",
+    "discord.js",
+    "bot",
+    "league of legends"
+  ],
+  "author": "Joao Santos <jm_santos7@hotmail.com> (https://joaosantos.dev/)",
+  "license": "MIT",
   "dependencies": {
     "discord.js": "^14.12.1",
     "dotenv": "^16.3.1",
@@ -20,5 +25,8 @@
   },
   "devDependencies": {
     "eslint": "^8.46.0"
+  },
+  "engines": {
+    "node": ">=19"
   }
 }
