@@ -90,7 +90,7 @@ const buttonWinTeamB = new ButtonBuilder()
   .setLabel('Team B won')
   .setStyle(ButtonStyle.Danger);
 
-const tenMinutes = 600_000;
+// const tenMinutes = 600_000;
 
 export default {
   data: new SlashCommandBuilder().setName('match').setDescription('Starts a lobby for a match.'),
@@ -159,7 +159,7 @@ export default {
         }
 
         // If teams are full, start the match
-        if (!match && teamA.length === 1 && teamB.length === 1) {
+        if (!match && teamA.length === 5 && teamB.length === 5) {
           match = await client.database.createMatch(teamA, teamB);
 
           const mentionsTeamA = '🟦 **Team A**: ' + teamA.map((id) => userMention(id)).join(', ');
@@ -285,12 +285,3 @@ export default {
     });
   },
 };
-
-async function startMatch(interaction, client, teamA, teamB) {
-  // Send match info to database
-  // Get teams' elo ratings
-  // Create button Cancel match
-  // Create vs. embed
-  // Create buttons to vote for team after 15 minutes
-  // Wait for winner votes (2 votes, at least 1 from losing team)
-}
