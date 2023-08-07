@@ -8,7 +8,8 @@
     "start": "node deploy-commands.js && node index.js",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky install"
   },
   "keywords": [
     "discord",
@@ -24,7 +25,12 @@
     "mongoose": "^7.4.2"
   },
   "devDependencies": {
-    "eslint": "^8.46.0"
+    "eslint": "^8.46.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^13.2.3"
+  },
+  "lint-staged": {
+    "*": "eslint --fix"
   },
   "engines": {
     "node": ">=19"
