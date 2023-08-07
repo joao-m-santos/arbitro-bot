@@ -7,12 +7,12 @@ import { Client, Collection, GatewayIntentBits } from 'discord.js';
 import Database from './database/index.js';
 import { __dirname } from './util.js';
 
-const { BOT_TOKEN: token, DB_URI: dbUrl } = process.env;
+const { BOT_TOKEN: token, DB_URI: dbUrl, DB_NAME: dbName } = process.env;
 
 // Create a new client instance
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-client.database = new Database(dbUrl);
+client.database = new Database(dbUrl, dbName);
 
 client.commands = new Collection();
 
