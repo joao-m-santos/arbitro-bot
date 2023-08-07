@@ -159,7 +159,7 @@ export default {
         }
 
         // If teams are full, start the match
-        if (!match && teamA.length === 5 && teamB.length === 5) {
+        if (!match && teamA.length === 2 && teamB.length === 2) {
           match = await client.database.createMatch(teamA, teamB);
 
           const mentionsTeamA = '🟦 **Team A**: ' + teamA.map((id) => userMention(id)).join(', ');
