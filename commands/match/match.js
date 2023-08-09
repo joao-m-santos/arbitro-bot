@@ -9,6 +9,8 @@ import {
   userMention,
 } from 'discord.js';
 
+import { cancelMatch } from './helpers.js';
+
 /**
  * Generates match embed based on two teams.
  * @param {Array<number>} teamA Team A player IDs
@@ -95,6 +97,8 @@ const buttonWinTeamB = new ButtonBuilder()
 export default {
   data: new SlashCommandBuilder().setName('match').setDescription('Starts a lobby for a match.'),
   async execute(interaction, client) {
+    await interaction.deferReply();
+
     const teamA = [];
     const teamB = [];
 
@@ -104,16 +108,30 @@ export default {
     let match;
 
     const row = new ActionRowBuilder().addComponents(buttonTeamA, buttonTeamB);
-    const response = await interaction.reply({
+    const response = await interaction.editReply({
       embeds: [getEmbed(teamA, teamB)],
       components: [row],
     });
 
     const cancelRow = new ActionRowBuilder().addComponents(buttonCancel);
-    await interaction.followUp({
+    const cancelMsg = await interaction.followUp({
       content: 'If you need to cancel this match:',
       components: [cancelRow],
       ephemeral: true,
+    });
+
+    const cancelCollector = cancelMsg.createMessageComponentCollector({
+      componentType: ComponentType.Button,
+      max: 10,
+      maxUsers: 10,
+      time: 3_600_000,
+    });
+    cancelCollector.on('collect', async (i) => {
+      if (i.customId === 'cancel') {
+        console.log('yo?');
+        await cancelMatch(response, i);
+        return;
+      }
     });
 
     const collector = response.createMessageComponentCollector({
@@ -124,42 +142,26 @@ export default {
     });
 
     collector.on('collect', async (i) => {
-      if (i.customId === 'cancel') {
-        // Update original message.
-        await interaction.editReply({ content: 'Match cancelled.', embeds: [], components: [] });
-        try {
-          // Clear ephemeral message content.
-          await i.update({
-            content: 'Match cancelled. Use `/match` to create another one.',
-            components: [],
-          });
-        } catch (error) {
-          console.error(error);
-        }
-
-        return;
-      }
-
       const isAddTeamA = i.customId === 'addTeamA';
       const isAddTeamB = i.customId === 'addTeamB';
 
       if (isAddTeamA || isAddTeamB) {
+        if ([...teamA, ...teamB].includes(i.user.id)) {
+          // Prevent from re-adding to a team
+          await i.reply({ content: 'Already in a team!', ephemeral: true });
+          return;
+        }
+
         if (isAddTeamA) {
-          if (teamA.includes(i.user.id)) {
-            // Prevent from re-adding to a team
-            await i.reply({ content: 'Already in a team!', ephemeral: true });
-          } else teamA.push(i.user.id);
+          teamA.push(i.user.id);
         }
 
         if (isAddTeamB) {
-          if (teamB.includes(i.user.id)) {
-            // Prevent from re-adding to a team
-            await i.reply({ content: 'Already in a team!', ephemeral: true });
-          } else teamB.push(i.user.id);
+          teamB.push(i.user.id);
         }
 
         // If teams are full, start the match
-        if (!match && teamA.length === 2 && teamB.length === 2) {
+        if (!match && teamA.length === 5 && teamB.length === 5) {
           match = await client.database.createMatch(teamA, teamB);
 
           const mentionsTeamA = '🟦 **Team A**: ' + teamA.map((id) => userMention(id)).join(', ');
@@ -212,6 +214,15 @@ export default {
 
       if (isWinTeamA || isWinTeamB) {
         const voterId = i.user.id;
+
+        if (![...teamA, ...teamB].includes(voterId)) {
+          // Prevent voting if not in the match
+          await i.reply({
+            content: 'You cannot vote because you are not part of this match',
+            ephemeral: true,
+          });
+          return;
+        }
 
         if (
           votesA.find((vote) => vote.id === voterId) ||

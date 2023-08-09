@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
  */
 
 function teamValidator(v) {
-  return v.length === 2;
+  return v.length === 5;
 }
 
 function winnerValidator(v) {
