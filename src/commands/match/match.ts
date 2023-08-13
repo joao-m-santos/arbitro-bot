@@ -192,8 +192,8 @@ export default {
         const isWinnerTeamB = votesB.length > 1 && votesB.find((vote) => !vote.fromTeam);
 
         if (isWinnerTeamA || isWinnerTeamB) {
-          let eloTableA: Array<EloTableEntry> = [];
-          let eloTableB: Array<EloTableEntry> = [];
+          const eloTableA: Array<EloTableEntry> = [];
+          const eloTableB: Array<EloTableEntry> = [];
 
           for (const id of teamA) {
             const player = await client.database.getPlayer(id);

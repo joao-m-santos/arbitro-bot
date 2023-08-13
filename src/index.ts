@@ -11,6 +11,7 @@ import { ExtendedClient } from './types.ts';
 const { BOT_TOKEN: token, DB_URI: dbUrl, DB_NAME: dbName } = process.env;
 
 // Create a new client instance
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 const client: ExtendedClient = new Client<true>({ intents: [GatewayIntentBits.Guilds] });
 
