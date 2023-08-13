@@ -4,69 +4,16 @@ import {
   ButtonBuilder,
   ButtonStyle,
   ComponentType,
-  EmbedBuilder,
   SlashCommandBuilder,
+  Snowflake,
   userMention,
 } from 'discord.js';
 
-import { cancelMatch } from './helpers.js';
-
-/**
- * Generates match embed based on two teams.
- * @param {Array<number>} teamA Team A player IDs
- * @param {Array<number>} teamB Team B player IDs
- * @param {?string} description Embed description.
- * @param {?string} matchId An optional match ID to show in footer.
- * @param {?number} eloTeamA An optional elo rating of team A.
- * @param {?number} eloTeamB An optional elo rating of team B.
- * @returns {EmbedBuilder}
- */
-function getEmbed(
-  teamA,
-  teamB,
-  description = `Teams being made up. Select the team you're in by clicking one of the buttons below.`,
-  matchId,
-  eloTeamA,
-  eloTeamB
-) {
-  const valueTeamA = teamA.length
-    ? teamA.map((id) => userMention(id)).join('\n')
-    : 'Waiting for players...';
-  const valueTeamB = teamB.length
-    ? teamB.map((id) => userMention(id)).join('\n')
-    : 'Waiting for players...';
-
-  const textTeamA = `**🟦 Team A**${eloTeamA ? ` (elo: ${eloTeamA})` : ''}`;
-  const textTeamB = `**🟥 Team B**${eloTeamB ? ` (elo: ${eloTeamB})` : ''}`;
-
-  const embed = new EmbedBuilder()
-    .setTitle('⚔️ New match')
-    .setDescription(description)
-    .addFields(
-      { name: textTeamA, value: valueTeamA, inline: true },
-      { name: textTeamB, value: valueTeamB, inline: true }
-    )
-    .setTimestamp();
-
-  if (matchId) embed.setFooter({ text: `Match ID: ${matchId}` });
-
-  return embed;
-}
-
-function getFinalEmbed(title, description, eloTableA, eloTableB) {
-  const mapContent = (array) =>
-    array
-      .map(({ id, startElo, endElo }) => `${userMention(id)}: **${endElo}** (${endElo - startElo})`)
-      .join('\n');
-
-  return new EmbedBuilder()
-    .setTitle(title)
-    .setDescription(description)
-    .addFields(
-      { name: '**🟦 Team A**', value: mapContent(eloTableA), inline: true },
-      { name: '**🟥 Team B**', value: mapContent(eloTableB), inline: true }
-    );
-}
+import { cancelMatch } from './util/actions.ts';
+import { EloTableEntry, getEmbed, getFinalEmbed } from './util/helpers.ts';
+import { TEAM_SIZE } from '../../util/team.ts';
+import { Command } from '../../types.ts';
+import { IMatch } from '../../database/schemas/match.ts';
 
 const buttonTeamA = new ButtonBuilder()
   .setCustomId('addTeamA')
@@ -99,21 +46,21 @@ export default {
   async execute(interaction, client) {
     await interaction.deferReply();
 
-    const teamA = [];
-    const teamB = [];
+    const teamA: Array<Snowflake> = [];
+    const teamB: Array<Snowflake> = [];
 
-    const votesA = [];
-    const votesB = [];
+    const votesA: Array<{ id: Snowflake; fromTeam: boolean }> = [];
+    const votesB: Array<{ id: Snowflake; fromTeam: boolean }> = [];
 
-    let match;
+    let match: IMatch | null;
 
-    const row = new ActionRowBuilder().addComponents(buttonTeamA, buttonTeamB);
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(buttonTeamA, buttonTeamB);
     const response = await interaction.editReply({
       embeds: [getEmbed(teamA, teamB)],
       components: [row],
     });
 
-    const cancelRow = new ActionRowBuilder().addComponents(buttonCancel);
+    const cancelRow = new ActionRowBuilder<ButtonBuilder>().addComponents(buttonCancel);
     const cancelMsg = await interaction.followUp({
       content: 'If you need to cancel this match:',
       components: [cancelRow],
@@ -161,8 +108,8 @@ export default {
         }
 
         // If teams are full, start the match
-        if (!match && teamA.length === 5 && teamB.length === 5) {
-          match = await client.database.createMatch(teamA, teamB);
+        if (!match && teamA.length === TEAM_SIZE && teamB.length === TEAM_SIZE) {
+          match = (await client.database.createMatch(teamA, teamB)) as IMatch;
 
           const mentionsTeamA = '🟦 **Team A**: ' + teamA.map((id) => userMention(id)).join(', ');
           const mentionsTeamB = '🟥 **Team B**: ' + teamB.map((id) => userMention(id)).join(', ');
@@ -187,7 +134,10 @@ export default {
 
           await setTimeout(3000);
 
-          const winRow = new ActionRowBuilder().addComponents(buttonWinTeamA, buttonWinTeamB);
+          const winRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            buttonWinTeamA,
+            buttonWinTeamB
+          );
 
           await updateResult.edit({
             embeds: [
@@ -242,27 +192,47 @@ export default {
         const isWinnerTeamB = votesB.length > 1 && votesB.find((vote) => !vote.fromTeam);
 
         if (isWinnerTeamA || isWinnerTeamB) {
-          let eloTableA = [];
-          let eloTableB = [];
+          let eloTableA: Array<EloTableEntry> = [];
+          let eloTableB: Array<EloTableEntry> = [];
 
           for (const id of teamA) {
             const player = await client.database.getPlayer(id);
-            eloTableA.push({ id, startElo: player.elo });
+            if (!player) {
+              console.error('Player not found');
+              return;
+            }
+            eloTableA.push({ id, startElo: player.elo, endElo: 0 });
           }
           for (const id of teamB) {
             const player = await client.database.getPlayer(id);
-            eloTableB.push({ id, startElo: player.elo });
+            if (!player) {
+              console.error('Player not found');
+              return;
+            }
+            eloTableB.push({ id, startElo: player.elo, endElo: 0 });
           }
 
+          if (!match) {
+            console.error('Match not registered');
+            return;
+          }
           await client.database.finishMatch(match, isWinTeamA ? 'A' : 'B');
 
           for (const id of teamA) {
             const player = await client.database.getPlayer(id);
-            eloTableA.find((entry) => entry.id === id).endElo = player.elo;
+            if (!player) {
+              console.error('Player not found');
+              return;
+            }
+            (eloTableA.find((entry) => entry.id === id) as EloTableEntry).endElo = player.elo;
           }
           for (const id of teamB) {
             const player = await client.database.getPlayer(id);
-            eloTableB.find((entry) => entry.id === id).endElo = player.elo;
+            if (!player) {
+              console.error('Player not found');
+              return;
+            }
+            (eloTableB.find((entry) => entry.id === id) as EloTableEntry).endElo = player.elo;
           }
 
           await interaction.editReply({
@@ -295,4 +265,4 @@ export default {
       }
     });
   },
-};
+} as Command;

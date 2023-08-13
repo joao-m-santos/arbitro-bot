@@ -1,5 +1,7 @@
 import { EmbedBuilder, SlashCommandBuilder, userMention } from 'discord.js';
 
+import { Command } from '../../types.ts';
+
 export default {
   data: new SlashCommandBuilder()
     .setName('leaderboard')
@@ -9,7 +11,7 @@ export default {
 
     const embed = new EmbedBuilder().setTitle('🏆 Leaderboard');
 
-    if (players.length) {
+    if (players?.length) {
       players.sort((playerA, playerB) => playerB.elo - playerA.elo);
 
       const formattedPlayerTags = players
@@ -29,4 +31,4 @@ export default {
 
     await interaction.reply({ embeds: [embed] });
   },
-};
+} as Command;

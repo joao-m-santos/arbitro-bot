@@ -1,6 +1,7 @@
-export async function cancelMatch(mainMessage, interaction) {
+import { ButtonInteraction, Message } from 'discord.js';
+
+export async function cancelMatch(mainMessage: Message, interaction: ButtonInteraction) {
   // Update original message.
-  console.log('cancelMatch type:', mainMessage.constructor.name);
   await mainMessage.edit({ content: 'Match cancelled.', embeds: [], components: [] });
 
   try {

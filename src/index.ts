@@ -4,15 +4,17 @@ import 'dotenv/config';
 
 import { Client, Collection, GatewayIntentBits } from 'discord.js';
 
-import Database from './database/index.js';
-import { __dirname } from './util.js';
+import Database from './database/index.ts';
+import { __dirname } from './util.ts';
+import { ExtendedClient } from './types.ts';
 
 const { BOT_TOKEN: token, DB_URI: dbUrl, DB_NAME: dbName } = process.env;
 
 // Create a new client instance
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+// @ts-ignore
+const client: ExtendedClient = new Client<true>({ intents: [GatewayIntentBits.Guilds] });
 
-client.database = new Database(dbUrl, dbName);
+client.database = new Database(dbUrl as string, dbName as string);
 
 client.commands = new Collection();
 
@@ -23,7 +25,7 @@ async function loadCommands() {
 
   for (const folder of commandFolders) {
     const commandsPath = path.join(foldersPath, folder);
-    const commandFiles = fs.readdirSync(commandsPath).filter((file) => file.endsWith('.js'));
+    const commandFiles = fs.readdirSync(commandsPath).filter((file) => file.endsWith('.ts'));
     for (const file of commandFiles) {
       const filePath = path.join(commandsPath, file);
       const command = (await import(filePath)).default;
@@ -44,7 +46,7 @@ async function loadCommands() {
 
 async function loadEvents() {
   const eventsPath = path.join(__dirname, 'events');
-  const eventFiles = fs.readdirSync(eventsPath).filter((file) => file.endsWith('.js'));
+  const eventFiles = fs.readdirSync(eventsPath).filter((file) => file.endsWith('.ts'));
 
   for (const file of eventFiles) {
     const filePath = path.join(eventsPath, file);
